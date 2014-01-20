@@ -203,9 +203,9 @@ module Vanity
         conversions = record.vanity_conversions.sum(:conversions, :conditions => {:alternative => alternative})
 
         {
-                :participants => participants,
-                :converted => converted,
-                :conversions => conversions
+          :participants => participants,
+          :converted => converted,
+          :conversions => conversions
         }
       end
 

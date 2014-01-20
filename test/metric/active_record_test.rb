@@ -9,11 +9,7 @@ class Sky < ActiveRecord::Base
     end
   end
 
-  if defined?(Rails::Railtie)
-    scope :high, lambda { { :conditions=>"height >= 4" } }
-  else
-    named_scope :high, lambda { { :conditions=>"height >= 4" } }
-  end
+  scope :high, lambda { { :conditions=>"height >= 4" } }
 end
 
 if ActiveRecord::Base.connected?
@@ -214,24 +210,13 @@ context "ActiveRecord Metric" do
   end
 
   test "with after_save" do
-    if rails3?
-      File.open "tmp/experiments/metrics/sky_is_limit.rb", "w" do |f|
-        f.write <<-RUBY
-          metric "Sky is limit" do
-            model Sky, :conditions=>["height > 3"]
-            Sky.after_save { |sky| track!(:sky_is_limit) if sky.height_changed? && sky.height > 3 }
-          end
-        RUBY
-      end
-    else
-      File.open "tmp/experiments/metrics/sky_is_limit.rb", "w" do |f|
-        f.write <<-RUBY
-          metric "Sky is limit" do
-            model Sky, :conditions=>["height > 3"]
-            Sky.after_save { |sky| track! if sky.height_changed? && sky.height > 3 }
-          end
-        RUBY
-      end
+    File.open "tmp/experiments/metrics/sky_is_limit.rb", "w" do |f|
+      f.write <<-RUBY
+        metric "Sky is limit" do
+          model Sky, :conditions=>["height > 3"]
+          Sky.after_save { |sky| track!(:sky_is_limit) if sky.height_changed? && sky.height > 3 }
+        end
+      RUBY
     end
     Vanity.playground.metrics
     times = 0
@@ -246,22 +231,12 @@ context "ActiveRecord Metric" do
   end
 
   test "do it youself" do
-    if rails3?
-      File.open "tmp/experiments/metrics/sky_is_limit.rb", "w" do |f|
-        f.write <<-RUBY
-          metric "Sky is limit" do
-            Sky.after_save { |sky| track!(:sky_is_limit) if sky.height_changed? && sky.height > 3 }
-          end
-        RUBY
-      end
-    else
-      File.open "tmp/experiments/metrics/sky_is_limit.rb", "w" do |f|
-        f.write <<-RUBY
-          metric "Sky is limit" do
-            Sky.after_save { |sky| track! if sky.height_changed? && sky.height > 3 }
-          end
-        RUBY
-      end
+    File.open "tmp/experiments/metrics/sky_is_limit.rb", "w" do |f|
+      f.write <<-RUBY
+        metric "Sky is limit" do
+          Sky.after_save { |sky| track!(:sky_is_limit) if sky.height_changed? && sky.height > 3 }
+        end
+      RUBY
     end
     Vanity.playground.metrics
     (1..5).each do |height|
@@ -299,13 +274,8 @@ context "ActiveRecord Metric" do
 
   teardown do
     Sky.delete_all
-    if rails3?
-      Sky.reset_callbacks(:create)
-      Sky.reset_callbacks(:save)
-    else
-      Sky.after_create.clear
-      Sky.after_save.clear
-    end
+    Sky.reset_callbacks(:create)
+    Sky.reset_callbacks(:save)
   end
 end
 

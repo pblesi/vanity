@@ -26,9 +26,7 @@ class UseVanityControllerTest < ActionController::TestCase
     UseVanityController.class_eval do
       use_vanity :current_user
     end
-    if ::Rails.respond_to?(:application) # Rails 3 configuration
-      ::Rails.application.config.session_options[:domain] = '.foo.bar'
-    end
+    ::Rails.application.config.session_options[:domain] = '.foo.bar'
   end
 
   def test_render_js_for_tests
@@ -53,7 +51,7 @@ class UseVanityControllerTest < ActionController::TestCase
   end
 
   def test_does_not_add_invalid_participant_to_experiment
-    @request.user_agent = "Googlebot/2.1 ( http://www.google.com/bot.html)"
+    request.user_agent = "Googlebot/2.1 ( http://www.google.com/bot.html)"
     get :index
     assert_equal 0, experiment(:pie_or_cake).alternatives.map(&:participants).sum
   end
@@ -73,15 +71,13 @@ class UseVanityControllerTest < ActionController::TestCase
   end
 
   def test_vanity_cookie_retains_id
-    @request.cookies["vanity_id"] = "from_last_time"
+    request.cookies["vanity_id"] = "from_last_time"
     get :index
-    # Rails 2 funkieness: if the cookie isn't explicitly set in the response,
-    # cookies[] is empty. Just make sure it's not re-set.
-    assert_equal rails3? ? "from_last_time" : nil,  cookies["vanity_id"]
+    assert_equal cookies["vanity_id"], "from_last_time"
   end
 
   def test_vanity_identity_set_from_cookie
-    @request.cookies["vanity_id"] = "from_last_time"
+    request.cookies["vanity_id"] = "from_last_time"
     get :index
     assert_equal "from_last_time", @controller.send(:vanity_identity)
   end
@@ -129,14 +125,14 @@ class UseVanityControllerTest < ActionController::TestCase
   end
 
     def test_vanity_identity_prefers_parameter_over_cookie
-    @request.cookies['vanity_id'] = "old_id"
+    request.cookies['vanity_id'] = "old_id"
     get :index, :_identity => "id_from_params"
     assert_equal "id_from_params", @controller.send(:vanity_identity)
     assert cookies['vanity_id'], "id_from_params"
   end
 
   def test_vanity_identity_prefers_cookie_over_object
-    @request.cookies['vanity_id'] = "from_last_time"
+    request.cookies['vanity_id'] = "from_last_time"
     @controller.current_user = stub(:id=>"user_id")
     get :index
     assert_equal "from_last_time", @controller.send(:vanity_identity)
@@ -181,9 +177,6 @@ class UseVanityControllerTest < ActionController::TestCase
 
   def teardown
     super
-    if !rails3?
-      UseVanityController.send(:filter_chain).clear
-    end
   end
 
 end
@@ -197,23 +190,14 @@ class VanityMailer < ActionMailer::Base
     use_vanity_mailer user
     experiment(:pie_or_cake).chooses(forced_outcome)
 
-    if defined?(Rails::Railtie)
-      mail :subject =>ab_test(:pie_or_cake).to_s, :body => ""
-    else
-      subject ab_test(:pie_or_cake).to_s
-      body ""
-    end
+    mail :subject =>ab_test(:pie_or_cake).to_s, :body => ""
   end
 
   def ab_test_content(user)
     use_vanity_mailer user
 
-    if defined?(Rails::Railtie)
-      mail do |format|
-        format.html { render :text=>view_context.vanity_tracking_image(Vanity.context.vanity_identity, :open, :host => "127.0.0.1:3000") }
-      end
-    else
-      body vanity_tracking_image(Vanity.context.vanity_identity, :open, :host => "127.0.0.1:3000")
+    mail do |format|
+      format.html { render :text=>view_context.vanity_tracking_image(Vanity.context.vanity_identity, :open, :host => "127.0.0.1:3000") }
     end
   end
 end
@@ -231,22 +215,22 @@ class UseVanityMailerTest < ActionMailer::TestCase
 
   def test_js_enabled_still_adds_participant
     Vanity.playground.use_js!
-    rails3? ? VanityMailer.ab_test_subject(nil, true) : VanityMailer.deliver_ab_test_subject(nil, true)
+    VanityMailer.ab_test_subject(nil, true)
 
     alts = experiment(:pie_or_cake).alternatives
     assert_equal 1, alts.map(&:participants).sum
   end
 
   def test_returns_different_alternatives
-    email = rails3? ? VanityMailer.ab_test_subject(nil, true) : VanityMailer.deliver_ab_test_subject(nil, true)
+    email = VanityMailer.ab_test_subject(nil, true)
     assert_equal 'true', email.subject
 
-    email = rails3? ? VanityMailer.ab_test_subject(nil, false) : VanityMailer.deliver_ab_test_subject(nil, false)
+    email = VanityMailer.ab_test_subject(nil, false)
     assert_equal 'false', email.subject
   end
 
   def test_tracking_image_is_rendered
-    email = rails3? ? VanityMailer.ab_test_content(nil) : VanityMailer.deliver_ab_test_content(nil)
+    email = VanityMailer.ab_test_content(nil)
     assert email.body =~ /<img/
     assert email.body =~ /_identity=/
   end
@@ -493,10 +477,10 @@ $:.unshift File.expand_path("../lib")
 RAILS_ROOT = File.expand_path(".")
       RB
       code = code_setup
-      code += defined?(Rails::Railtie) ? load_rails_3_or_4(env) : load_rails_2(env)
+      code += load_rails_3_or_4(env)
       code += %Q{\nrequire "vanity"\n}
       code += before_initialize
-      code += defined?(Rails::Railtie) ? initialize_rails_3_or_4 : initialize_rails_2
+      code += initialize_rails_3_or_4
       code += after_initialize
       tmp.write code
       tmp.flush
@@ -506,17 +490,6 @@ RAILS_ROOT = File.expand_path(".")
     ensure
       tmp.close!
     end
-  end
-
-  def load_rails_2(env)
-    <<-RB
-RAILS_ENV = ENV['RACK_ENV'] = "#{env}"
-require "initializer"
-require "active_support"
-Rails.configuration = Rails::Configuration.new
-initializer = Rails::Initializer.new(Rails.configuration)
-initializer.check_gem_dependencies
-    RB
   end
 
   def load_rails_3_or_4(env)
@@ -536,12 +509,6 @@ module Foo
     ActiveSupport::Deprecation.silenced = true if ActiveSupport::Deprecation.respond_to?(:silenced) && ENV['CI']
   end
 end
-    RB
-  end
-
-  def initialize_rails_2
-    <<-RB
-initializer.after_initialize
     RB
   end
 

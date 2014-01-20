@@ -21,5 +21,13 @@ Gem::Specification.new do |spec|
   spec.rdoc_options     = "--title", "Vanity #{spec.version}", "--main", "README.rdoc",
                           "--webcvs", "http://github.com/assaf/#{spec.name}"
 
+  spec.add_development_dependency "bundler", "~> 1.3"
+  spec.add_development_dependency "appraisal", ">= 1.0.0.beta2"
+  # Documentation
+  spec.add_development_dependency "jekyll"
+  spec.add_development_dependency "rake"
+  spec.add_development_dependency "RedCloth"
+  spec.add_development_dependency "yard"
+
   spec.required_ruby_version = ">= 1.8.7"
 end
