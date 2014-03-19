@@ -19,15 +19,15 @@
         </div>
       <% end %>
 
-      <% if @experiments_persisted %>
-        <% if @experiments.present? %>
+      <% if experiments_persisted %>
+        <% if experiments.present? %>
           <h2>Experiments</h2>
-          <%= render :file=>Vanity.template("_experiments"), :locals=>{:experiments=>@experiments} %>
+          <%= render :file=>Vanity.template("_experiments"), :locals=>{:experiments=>experiments} %>
         <% end %>
 
-        <% unless @metrics.empty? %>
+        <% unless metrics.empty? %>
           <h2>Metrics</h2>
-          <%= render :file=>Vanity.template("_metrics"), :locals=>{:metrics=>@metrics, :experiments=>@experiments} %>
+          <%= render :file=>Vanity.template("_metrics"), :locals=>{:metrics=>metrics, :experiments=>experiments} %>
         <% end %>
       <% else %>
         <div class="alert">
